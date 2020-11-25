@@ -152,10 +152,11 @@ void test2_full(){
 
   blst_miller_loop(myfp12,(blst_p2_affine*)Q,(blst_p1_affine*)P);
 
+/*
   blst_fp12 *myfp12_out = malloc(48*12);
   blst_final_exp(myfp12_out, myfp12);
   f12print((uint64_t*)myfp12_out);
-
+*/
 }
 
 void test3(){	// from wasmsnark/test
@@ -238,8 +239,8 @@ int main(int argc,char**argv){
 
   //test1();
   //test2();
-  //test2_full();
-  test3();
+  test2_full();
+  // test3();
   //test4();
 
   return 0;

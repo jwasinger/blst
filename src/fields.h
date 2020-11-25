@@ -69,7 +69,7 @@ static inline void mul_fp2(vec384x ret, const vec384x a, const vec384x b)
 {   
 
 // paul: flip this switch to 
-#define MUL_FP2_SWITCH 0
+#define MUL_FP2_SWITCH 3
 
 #if MUL_FP2_SWITCH==0
   // optimized version
