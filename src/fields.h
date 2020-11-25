@@ -66,7 +66,58 @@ static inline void lshift_fp2(vec384x ret, const vec384x a, size_t count)
 }
 
 static inline void mul_fp2(vec384x ret, const vec384x a, const vec384x b)
-{   mul_mont_384x(ret, a, b, BLS12_381_P, p0);   }
+{   
+
+// paul: flip this switch to 
+#define MUL_FP2_SWITCH 0
+
+#if MUL_FP2_SWITCH==0
+  // optimized version
+  mul_mont_384x(ret, a, b, BLS12_381_P, p0);   
+#endif
+
+#if MUL_FP2_SWITCH==1
+  // gives same result as above mul_mont_384x()
+  vec768 t0, t1, t2;
+  vec384 aa, bb;
+  mul_384(t0, a[0], b[0]);
+  mul_384(t1, a[1], b[1]);
+  add_mod_384(aa, a[0], a[1], BLS12_381_P);
+  add_mod_384(bb, b[0], b[1], BLS12_381_P);
+  mul_384(t2, aa, bb);
+  sub_mod_384x384(t2, t2, t0, BLS12_381_P);
+  sub_mod_384x384(t2, t2, t1, BLS12_381_P);
+  sub_mod_384x384(t0, t0, t1, BLS12_381_P);
+  redc_mont_384(ret[0], t0, BLS12_381_P, p0);
+  redc_mont_384(ret[1], t2, BLS12_381_P, p0);
+#endif
+
+#if MUL_FP2_SWITCH==2
+  // the unoptimized mul_fp2 shared by Kelly Olson
+  vec384 aa, bb, cc;
+
+  add_mod_384(aa, a[0], a[1], BLS12_381_P);
+  add_mod_384(bb, b[0], b[1], BLS12_381_P);
+  mul_mont_384(bb, bb, aa, BLS12_381_P, p0);
+  mul_mont_384(aa, a[0], b[0], BLS12_381_P, p0);
+  mul_mont_384(cc, a[1], b[1], BLS12_381_P, p0);
+  sub_mod_384(ret[0], aa, cc, BLS12_381_P);
+  add_mod_384(ret[1], bb, aa, BLS12_381_P);
+  sub_mod_384(ret[1], ret[1], cc, BLS12_381_P);
+#endif
+
+#if MUL_FP2_SWITCH==3
+  // naive mul_fp2 using four muls
+  vec384 t0, t1;
+  mul_mont_384(t0, a[0], b[0], BLS12_381_P, p0);
+  mul_mont_384(t1, a[1], b[1], BLS12_381_P, p0);
+  sub_mod_384(ret[0], t0, t1, BLS12_381_P);
+  mul_mont_384(t0, a[0], b[1], BLS12_381_P, p0);
+  mul_mont_384(t1, a[1], b[0], BLS12_381_P, p0);
+  add_mod_384(ret[1], t0, t1, BLS12_381_P);
+#endif
+
+}
 
 static inline void sqr_fp2(vec384x ret, const vec384x a)
 {   sqr_mont_384x(ret, a, BLS12_381_P, p0);   }

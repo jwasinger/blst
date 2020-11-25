@@ -4,8 +4,103 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <stdio.h>
 #include "point.h"
 #include "fields.h"
+
+#include <byteswap.h>
+
+
+
+int verbose = 1;
+static void print_f1_point(const void *p, char* name){
+ if (verbose){
+  printf("%s ",name);
+  for (int j=0;j<6;j++)
+    //printf("%016llx ",bswap_64(*(((unsigned long long*)p)+j)));
+    printf("%016lx ",bswap_64(*(((long unsigned int*)p)+j)));
+  printf("\n");
+ }
+}
+
+static void print_f2_point(const void *p, char* name){
+ if (verbose){
+  print_f1_point((((unsigned long long*)p)),name);
+  print_f1_point((((unsigned long long*)p)+6),name);
+ }
+}
+
+static void print_f6_point(const void *p, char* name){
+ if (verbose){
+  printf("%s\n",name);
+  for (int i=0;i<6;i++){
+    print_f1_point((((unsigned long long*)p)+i*6),"");
+  }
+ }
+}
+
+static void print_f12_point(const void *p, char* name){
+ if (verbose){
+  printf("%s\n",name);
+  for (int i=0;i<12;i++){
+    print_f1_point((((unsigned long long*)p)+i*6),"");
+  }
+ }
+}
+
+static void print_E1_point(const void *p, char* name, int jacobian_flag){
+ if (verbose){
+  printf("%s.X\n",name);
+  print_f1_point((((unsigned long long*)p)),"");
+  printf("%s.Y\n",name);
+  print_f1_point((((unsigned long long*)p)+6),"");
+  if (jacobian_flag){
+    printf("%s.Z\n",name);
+    print_f1_point((((unsigned long long*)p)+12),"");
+  }
+ }
+}
+
+static void print_E2_point(const void *p, char* name, int jacobian_flag){
+
+ if (verbose){
+  printf("%s.X\n",name);
+  print_f2_point((((unsigned long long*)p)),"");
+  printf("%s.Y\n",name);
+  print_f2_point((((unsigned long long*)p)+12),"");
+  if (jacobian_flag){
+    printf("%s.Z\n",name);
+    print_f2_point((((unsigned long long*)p)+24),"");
+  }
+ }
+/*
+  printf("%s.X\n",name);
+ for (int j=0;j<6;j++)
+    printf("%016llx ",*(((unsigned long long*)p)+j));
+  printf("\n");
+ for (int j=0;j<6;j++)
+    printf("%016llx ",*(((unsigned long long*)p)+j+6));
+  printf("\n");
+  printf("%s.Y\n",name);
+  for (int j=0;j<6;j++)
+    printf("%016llx ",*(((unsigned long long*)p)+j+12));
+  printf("\n");
+  for (int j=0;j<6;j++)
+    printf("%016llx ",*(((unsigned long long*)p)+j+18));
+  printf("\n");
+  if (jacobian_flag){
+    printf("%s.Z\n",name);
+    for (int j=0;j<6;j++)
+      printf("%016llx ",*(((unsigned long long*)p)+j+24));
+    printf("\n");
+    for (int j=0;j<6;j++)
+      printf("%016llx ",*(((unsigned long long*)p)+j+30));
+    printf("\n");
+  }
+*/
+}
+
+
 
 /*
  * Line evaluations from  https://eprint.iacr.org/2010/354.pdf
@@ -25,54 +120,94 @@ static void line_add(vec384fp6 line, POINTonE2 *T, const POINTonE2 *R,
      * https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-madd-2007-bl
      * with XYZ3 being |T|, XYZ1 - |R|, XY2 - |Q|, i.e. Q is affine
      */
+
+FILE *f = fopen("file.txt", "w");
+fprintf(f,"Some text\n");
+fclose(f);
+
+
+
+    if(verbose)printf("line_add()\n");
     sqr_fp2(Z1Z1, R->Z);                /* Z1Z1 = Z1^2 */
+    print_f2_point(Z1Z1, "Z1Z1=Z1^2");
     mul_fp2(U2, Q->X, Z1Z1);            /* U2 = X2*Z1Z1 */
+    print_f2_point(U2, "U2=X2*Z1Z1");
 
     mul_fp2(S2, Q->Y, R->Z);
+    print_f2_point(S2, "S2=Y2*Z1");
     mul_fp2(S2, S2, Z1Z1);              /* S2 = Y2*Z1*Z1Z1 */
+    print_f2_point(S2, "S2=S2*Z1Z1");
 
     sub_fp2(H, U2, R->X);               /* H = U2-X1 */
+    print_f2_point(H, "H=U2-X1");
 
     sqr_fp2(HH, H);                     /* HH = H^2 */
+    print_f2_point(HH, "HH=H^2");
     add_fp2(I, HH, HH);
+    print_f2_point(I, "I=HH+HH");
     add_fp2(I, I, I);                   /* I = 4*HH */
+    print_f2_point(I, "I=I+I=4*HH");
 
     mul_fp2(J, H, I);                   /* J = H*I */
+    print_f2_point(J, "J = H*I");
 
     sub_fp2(r, S2, R->Y);
+    print_f2_point(r, "r = S2-Y1");
     add_fp2(r, r, r);                   /* r = 2*(S2-Y1) */
+    print_f2_point(r, "r = r+r = 2*(S2-Y1)");
 
     mul_fp2(V, R->X, I);                /* V = X1*I */
+    print_f2_point(V, "V = X1*I");
 
     sqr_fp2(T->X, r);
+    print_f2_point(T->X, "X3 = r^2");
     sub_fp2(T->X, T->X, J);
+    print_f2_point(T->X, "X3 = X3-J");
     sub_fp2(T->X, T->X, V);
+    print_f2_point(T->X, "X3 = X3-V");
     sub_fp2(T->X, T->X, V);             /* X3 = r^2-J-2*V */
+    print_f2_point(T->X, "X3 = X3-V = r^2-J-2*V");
 
     mul_fp2(J, J, R->Y);
+    print_f2_point(J, "J = J*Y1");
     sub_fp2(T->Y, V, T->X);
+    print_f2_point(T->Y, "Y3 = V-X3");
     mul_fp2(T->Y, T->Y, r);
+    print_f2_point(T->Y, "Y3 = Y3*r");
     sub_fp2(T->Y, T->Y, J);
+    print_f2_point(T->Y, "Y3 = Y3-J");
     sub_fp2(T->Y, T->Y, J);             /* Y3 = r*(V-X3)-2*Y1*J */
+    print_f2_point(T->Y, "Y3 = Y3-J = r*(V-X3)-2*Y1*J");
 
     add_fp2(T->Z, R->Z, H);
+    print_f2_point(T->Z, "Z3 = Z1+H");
     sqr_fp2(T->Z, T->Z);
+    print_f2_point(T->Z, "Z3 = Z3^2");
     sub_fp2(T->Z, T->Z, Z1Z1);
+    print_f2_point(T->Z, "Z3 = Z3-Z1Z1");
     sub_fp2(T->Z, T->Z, HH);            /* Z3 = (Z1+H)^2-Z1Z1-HH */
+    print_f2_point(T->Z, "Z3 = Z3-HH = (Z1+H)^2-Z1Z1-HH");
 
     /*
      * line evaluation
      */
     mul_fp2(I, r, Q->X);
+    print_f2_point(I, "I = r*X2");
     mul_fp2(J, Q->Y, T->Z);
+    print_f2_point(J, "J = Y2*Z3");
     sub_fp2(I, I, J);
+    print_f2_point(I, "I = I-J");
     add_fp2(line[0], I, I);          /* 2*(r*X2 - Y2*Z3) */
+    print_f2_point(line[0], "line0 = I+I = 2*(r*X2 - Y2*Z3)");
 #ifdef r
 # undef r
 #else
     vec_copy(line[1], r, sizeof(r));
 #endif
     vec_copy(line[2], T->Z, sizeof(T->Z));
+    print_f2_point(line[2], "line2 = Z3");
+
+    if(verbose)printf("done line_add()\n");
 }
 
 static void line_dbl(vec384fp6 line, POINTonE2 *T, const POINTonE2 *Q)
@@ -82,56 +217,90 @@ static void line_dbl(vec384fp6 line, POINTonE2 *T, const POINTonE2 *Q)
     /*
      * https://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#doubling-dbl-2009-alnr
      */
+
     sqr_fp2(A, Q->X);                   /* A = X1^2 */
     sqr_fp2(B, Q->Y);                   /* B = Y1^2 */
+    //print_f2_point(Q->Z, "Q->Z");
     sqr_fp2(ZZ, Q->Z);                  /* ZZ = Z1^2 */
+    print_f2_point(ZZ, "ZZ");
     sqr_fp2(C, B);                      /* C = B^2 */
+    print_f2_point(C, "C");
 
     add_fp2(D, Q->X, B);                /* X1+B */
     sqr_fp2(D, D);                      /* (X1+B)^2 */
     sub_fp2(D, D, A);                   /* (X1+B)^2-A */
     sub_fp2(D, D, C);                   /* (X1+B)^2-A-C */
     add_fp2(D, D, D);                   /* D = 2*((X1+B)^2-A-C) */
+    print_f2_point(D, "D=2*((X1+B)^2-A-C)");
 
     mul_by_3_fp2(E, A);                 /* E = 3*A */
     sqr_fp2(F, E);                      /* F = E^2 */
+    print_f2_point(E, "E=3*A");
+    print_f2_point(F, "F=E^2");
 
     add_fp2(line[0], E, Q->X);          /* 3*A+X1 for line evaluation */
+    print_f2_point(Q->X, "Q->X");
+    print_f2_point(line[0], "line[0]=E+Q->X");
 
     sub_fp2(T->X, F, D);
     sub_fp2(T->X, T->X, D);             /* X3 = F-2*D */
+    print_f2_point(T->X, "X3=F-2*D");
 
     add_fp2(T->Z, Q->Y, Q->Z);
     sqr_fp2(T->Z, T->Z);
     sub_fp2(T->Z, T->Z, B);
     sub_fp2(T->Z, T->Z, ZZ);            /* Z3 = (Y1+Z1)^2-B-ZZ */
+    print_f2_point(T->Z, "Z3=(Y1+Z1)^2-B-ZZ");
 
     mul_by_8_fp2(C, C);                 /* 8*C */
+    print_f2_point(C, "8*C");
     sub_fp2(T->Y, D, T->X);             /* D-X3 */
+    print_f2_point(T->Y, "D-X3");
     mul_fp2(T->Y, T->Y, E);             /* E*(D-X3) */
+    print_f2_point(T->Y, "E*(D-X3)");
     sub_fp2(T->Y, T->Y, C);             /* Y3 = E*(D-X3)-8*C */
+    print_f2_point(T->Y, "Y3");
 
     /*
      * line evaluation
      */
     sqr_fp2(line[0], line[0]);
+    print_f2_point(line[0], "line[0]=line[0]^2");
     sub_fp2(line[0], line[0], A);
+    print_f2_point(line[0], "line[0]-=A");
     sub_fp2(line[0], line[0], F);       /* (3*A+X1)^2 - X1^2 - 9*A^2 */
+    print_f2_point(line[0], "line[0]-=F");
     lshift_fp2(B, B, 2);
+    print_f2_point(B, "B=4B");
     sub_fp2(line[0], line[0], B);       /* 6*X1^3 - 4*Y1^2 */
+    print_f2_point(line[0], "line[0]-=B");
 
     mul_fp2(line[1], E, ZZ);            /* 3*X1^2 * Z1^2 */
+    print_f2_point(line[1], "line[1]=E*ZZ");
 
     mul_fp2(line[2], T->Z, ZZ);         /* Z3 * Z1^2 */
+    print_f2_point(line[2], "line[2]=T->Z*ZZ");
 }
 
 static void line_by_Px2(vec384fp6 line, const POINTonE1_affine *Px2)
 {
+    if(verbose) printf("line_by_Px2()\n");
+    print_f1_point(line[1][0], "line[1][0]");
+    print_f1_point(line[1][1], "line[1][1]");
+    print_f1_point(line[2][0], "line[2][0]");
+    print_f1_point(line[2][1], "line[2][1]");
+    print_f1_point(Px2->X, "Px2->X");
+    print_f1_point(Px2->Y, "Px2->Y");
+
     mul_fp(line[1][0], line[1][0], Px2->X);   /* "b01" *= -2*P->X */
+    print_f1_point(line[1][0], "line[1][0]*=Px2->X");
     mul_fp(line[1][1], line[1][1], Px2->X);
+    print_f1_point(line[1][1], "line[1][1]*=Px2->X");
 
     mul_fp(line[2][0], line[2][0], Px2->Y);   /* "b11" *= 2*P->Y */
+    print_f1_point(line[2][0], "line[2][0]*=Px2->Y");
     mul_fp(line[2][1], line[2][1], Px2->Y);
+    print_f1_point(line[2][1], "line[2][1]*=Px2->Y");
 }
 
 #if 0
@@ -184,11 +353,23 @@ static void start_dbl_n(vec384fp12 ret, POINTonE2 T[],
     size_t i;
     vec384fp6 line; /* it's not actual fp6, but 3 packed fp2, "xy00z0"  */
 
+    if(verbose) printf("start_dbl_n\n");
+    print_f12_point(ret,"ret");
+    print_f6_point(line,"line");
+    print_E2_point(T,"T",1);
+
     /* first step is ret = 1^2*line, which is replaced with ret = line  */
     line_dbl(line, T+0, T+0);           line_by_Px2(line, Px2+0);
+
     vec_zero(ret, sizeof(vec384fp12));
     vec_copy(ret[0][0], line[0], 2*sizeof(vec384fp2));
     vec_copy(ret[1][1], line[2], sizeof(vec384fp2));
+
+    if(verbose) printf("start_dbl_n done\n");
+    print_f12_point(ret,"ret");
+    print_f6_point(line,"line");
+    print_E2_point(T,"T",1);
+    if(verbose) printf("\n");
 
     for (i = 1; i < n; i++) {
         line_dbl(line, T+i, T+i);       line_by_Px2(line, Px2+i);
@@ -208,13 +389,21 @@ static void add_n_dbl_n(vec384fp12 ret, POINTonE2 T[],
         line_add(line, T+i, T+i, Q+i);  line_by_Px2(line, Px2+i);
         mul_by_xy00z0_fp12(ret, ret, line);
     }
+    if(verbose) printf("back to add_n_dbl_n()\n");
     while (k--) {
+     if(verbose) printf("iterating starting with applying sqr_fp12()\n");
         sqr_fp12(ret, ret);
         for (i = 0; i < n; i++) {
+            if(verbose) printf("iterating on line_dbl()\n");
             line_dbl(line, T+i, T+i);   line_by_Px2(line, Px2+i);
             mul_by_xy00z0_fp12(ret, ret, line);
         }
     }
+    if(verbose) printf("done with add_n_dbl_n()\n");
+    print_f12_point(ret,"ret");
+    print_f6_point(line,"line");
+    print_E2_point(T,"T",1);
+    if(verbose) printf("\n");
 }
 
 static void miller_loop_n(vec384fp12 ret, const POINTonE2_affine Q[],
@@ -239,24 +428,37 @@ static void miller_loop_n(vec384fp12 ret, const POINTonE2_affine Q[],
         return;
     }
 
+    if(verbose) printf("miller loop\n");
     for (i = 0; i < n; i++) {
         /* Move common expression from line evaluation to line_by_Px2.  */
         add_fp(Px2[i].X, P[i].X, P[i].X);
+        print_f1_point(Px2[i].X, "Px2.x=PX+PX");
         neg_fp(Px2[i].X, Px2[i].X);
+        print_f1_point(Px2[i].X, "Px2.X=0-Px2.X");
         add_fp(Px2[i].Y, P[i].Y, P[i].Y);
+        print_f1_point(Px2[i].Y, "Px2.Y=PY+PY");
 
         vec_copy(T[i].X, Q[i].X, 2*sizeof(T[i].X));
         vec_copy(T[i].Z, BLS12_381_Rx.p2, sizeof(T[i].Z));
     }
+    print_E1_point(Px2,"Px2",0);
+    print_E2_point(T,"T",1);
+    print_E2_point(Q,"Q",0);
+    print_E1_point(P,"P",0);
 
+    if(verbose) printf("miller loop begin add dbl stuff\n");
     /* first step is ret = 1^2*line, which is replaced with ret = line  */
     start_dbl_n(ret, T, Px2, n);                /* 0x2                  */
+    //add_n_dbl_n(ret, T, Q, Px2, n, 1);          /* ..0xc                */
     add_n_dbl_n(ret, T, Q, Px2, n, 2);          /* ..0xc                */
     add_n_dbl_n(ret, T, Q, Px2, n, 3);          /* ..0x68               */
     add_n_dbl_n(ret, T, Q, Px2, n, 9);          /* ..0xd200             */
     add_n_dbl_n(ret, T, Q, Px2, n, 32);         /* ..0xd20100000000     */
     add_n_dbl_n(ret, T, Q, Px2, n, 16);         /* ..0xd201000000010000 */
     conjugate_fp12(ret);                /* account for z being negative */
+    if(verbose) printf("end miller loop\n");
+    print_f12_point(ret,"ret");
+    if(verbose) printf("\n");
 }
 
 static void pre_add_n_dbl(vec384fp6 lines[], POINTonE2 *T,
@@ -373,26 +575,39 @@ static void final_exp(vec384fp12 ret, const vec384fp12 f)
 
     vec_copy(y1, f, sizeof(y1));
     conjugate_fp12(y1);
+    print_f12_point(y1,"y1");
     inverse_fp12(y2, f);
+    print_f12_point(y2,"y2");
     mul_fp12(ret, y1, y2);
+    print_f12_point(ret,"ret");
     frobenius_map_fp12(y2, ret, 2);
+    print_f12_point(y2,"y2");
     mul_fp12(ret, ret, y2);
 
     cyclotomic_sqr_fp12(y0, ret);
+    print_f12_point(y0,"y0");
     raise_to_z(y1, y0);
+    print_f12_point(y1,"y1");
     raise_to_z_div_by_2(y2, y1);
+    print_f12_point(y2,"y2");
     vec_copy(y3, ret, sizeof(y3));
     conjugate_fp12(y3);
+    print_f12_point(y3,"y3");
     mul_fp12(y1, y1, y3);
     conjugate_fp12(y1);
     mul_fp12(y1, y1, y2);
+    print_f12_point(y1,"y1");
     raise_to_z(y2, y1);
+    print_f12_point(y2,"y2");
     raise_to_z(y3, y2);
     conjugate_fp12(y1);
     mul_fp12(y3, y3, y1);
     conjugate_fp12(y1);
     frobenius_map_fp12(y1, y1, 3);
     frobenius_map_fp12(y2, y2, 2);
+    print_f12_point(y1,"y1");
+    print_f12_point(y2,"y2");
+    print_f12_point(y3,"y3");
     mul_fp12(y1, y1, y2);
     raise_to_z(y2, y3);
     mul_fp12(y2, y2, y0);
@@ -400,6 +615,9 @@ static void final_exp(vec384fp12 ret, const vec384fp12 f)
     mul_fp12(y1, y1, y2);
     frobenius_map_fp12(y2, y3, 1);
     mul_fp12(ret, y1, y2);
+    print_f12_point(y1,"y1");
+    print_f12_point(y2,"y2");
+    print_f12_point(ret,"ret final");
 }
 
 void blst_miller_loop(vec384fp12 ret, const POINTonE2_affine *Q,

@@ -17,7 +17,8 @@ TOP=`dirname $0`
 
 CC=${CC:-cc}
 # if -Werror stands in the way, bypass with -Wno-error on command line
-CFLAGS=${CFLAGS:--O -fPIC -Wall -Wextra -Werror}
+CFLAGS=${CFLAGS:--O -fPIC -Wall -Wextra}
+#CFLAGS=${CFLAGS:--O -fPIC -Wall -Wextra -Werror}
 PERL=${PERL:-perl}
 unset cflags shared
 
@@ -45,6 +46,7 @@ if (${CC} ${CFLAGS} -dM -E -x c /dev/null) 2>/dev/null | grep -q x86_64; then
     cflags="$cflags -mno-avx" # avoid costly transitions
     if (grep -q -e '^flags.*\badx\b' /proc/cpuinfo) 2>/dev/null; then
         cflags="-D__ADX__ $cflags"
+    #    cflags="-D__BLST_PORTABLE__ $cflags"	# paul: forgot what this does
     fi
 fi
 
