@@ -157,35 +157,28 @@ void test2_full(){
 }
 
 
+// test e(pG1_1, pG2_1) * e(pG1_2, pG2_2) == 1
 bool pairing_eq2(uint8_t *pG1_1, uint8_t *pG2_1, uint8_t *pG1_2, uint8_t *pG2_2) {
-/*
-2pairing check:
-blst_miller_loop()
-blst_miller_loop()
-blst_fp12_mul()
-blst_final_exp()
-blst_fp12_is_one()
-*/
-    uint8_t output_miller1[48 * 12];
-    uint8_t output_miller2[48 * 12];
-    uint8_t final_exp_input[48 * 12];
-    uint8_t result[48 * 12];
+  // not sure if blst cares about clobbering outputs.  non-clobbered here just to be safe
+  uint8_t output_miller1[48 * 12];
+  uint8_t output_miller2[48 * 12];
+  uint8_t final_exp_input[48 * 12];
+  uint8_t result[48 * 12];
 
-    blst_miller_loop(output_miller1, pG2_1, pG1_1);
-    blst_miller_loop(output_miller2, pG2_2, pG1_2);
-    blst_fp12_mul(final_exp_input, output_miller1, output_miller2);
-    blst_final_exp(result, final_exp_input);
-    return blst_fp12_is_one(result);
+  blst_miller_loop(output_miller1, pG2_1, pG1_1);
+  blst_miller_loop(output_miller2, pG2_2, pG1_2);
+  blst_fp12_mul(final_exp_input, output_miller1, output_miller2);
+  blst_final_exp(result, final_exp_input);
+  return blst_fp12_is_one(result);
 }
 
 // test e(pG1, pG2) * e(-pG1, pG2) == 1 where pG1 and pG2 are generator points
-// reference: {{websnark branch link}}
 void test_pairing2_check() {
-uint8_t p1_G1[48 * 2], p1_G2[48 * 4], p2_G1[48 * 2], p2_G2[48 * 4];
+  uint8_t p1_G1[48 * 2], p1_G2[48 * 4], p2_G1[48 * 2], p2_G2[48 * 4];
 
-// p1_G1 <- G1 generator (normal form)
-hexstr_to_bytearray(p1_G1, "008848defe740a67c8fc6225bf87ff5485951e2caa9d41bb188282c8bd37cb5cd5481512ffcd394eeab9b16eb21be9ef");
-hexstr_to_bytearray(p1_G1 + 48, "01914a69c5102eff1f674f5d30afeec4bd7fb348ca3e52d96d182ad44fb82305c2fe3d3634a9591afd82de55559c8ea6");
+  // p1_G1 <- G1 generator (normal form)
+  hexstr_to_bytearray(p1_G1, "008848defe740a67c8fc6225bf87ff5485951e2caa9d41bb188282c8bd37cb5cd5481512ffcd394eeab9b16eb21be9ef");
+  hexstr_to_bytearray(p1_G1 + 48, "01914a69c5102eff1f674f5d30afeec4bd7fb348ca3e52d96d182ad44fb82305c2fe3d3634a9591afd82de55559c8ea6");
 
 // p1_G2 <- G2 generator (normal form)
   hexstr_to_bytearray(p1_G2, "018480be71c785fec89630a2a3841d01c565f071203e50317ea501f557db6b9b71889f52bb53540274e3e48f7c005196");
@@ -193,13 +186,14 @@ hexstr_to_bytearray(p1_G1 + 48, "01914a69c5102eff1f674f5d30afeec4bd7fb348ca3e52d
   hexstr_to_bytearray(p1_G2 + 96, "00690d665d446f7bd960736bcbb2efb4de03ed7274b49a58e458c282f832d204f2cf88886d8c7c2ef094094409fd4ddf");
   hexstr_to_bytearray(p1_G2 + 144,"00f8169fd28355189e549da3151a70aa61ef11ac3d591bf12463b01acee304c24279b83f5e52270bd9a1cdd185eb8f93");
 
-// p2_G1 <- neg(p1_G1)
-blst_fp2_cneg(p2_G1, p1_G1, 0);
-printf("G1 point\n");
-f1print(p1_G1);
+  // p2_G1 <- neg(p1_G1)
+  blst_fp2_cneg(p2_G1, p1_G1, 0);
 
-printf("negated G1 point\n");
-f1print(p2_G1);
+  printf("G1 point\n");
+  f1print(p1_G1);
+
+  printf("negated G1 point\n");
+  f1print(p2_G1);
 
 // p2_G2 <- G2 generator (normal form)
   hexstr_to_bytearray(p2_G2, "018480be71c785fec89630a2a3841d01c565f071203e50317ea501f557db6b9b71889f52bb53540274e3e48f7c005196");
@@ -208,12 +202,12 @@ f1print(p2_G1);
   hexstr_to_bytearray(p2_G2 + 144,"00f8169fd28355189e549da3151a70aa61ef11ac3d591bf12463b01acee304c24279b83f5e52270bd9a1cdd185eb8f93");
 
 
-/*
-assert e(p1[0], p2[0]) * e(p1[1], p2[1]) == 1
-*/
-if (!pairing_eq2(p1_G1, p1_G2, p2_G1, p2_G2)) {
-    printf("fuck dude\n");
-}
+  /*
+  assert e(p1[0], p2[0]) * e(p1[1], p2[1]) == 1
+  */
+  if (!pairing_eq2(p1_G1, p1_G2, p2_G1, p2_G2)) {
+      printf("fuck dude\n");
+  }
 }
 
 void test3(){	// from wasmsnark/test
