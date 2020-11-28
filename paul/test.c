@@ -151,11 +151,47 @@ void test2_full(){
   blst_fp12 *myfp12 = malloc(48*12);
 
   blst_miller_loop(myfp12,(blst_p2_affine*)Q,(blst_p1_affine*)P);
-
-/*
   blst_fp12 *myfp12_out = malloc(48*12);
   blst_final_exp(myfp12_out, myfp12);
   f12print((uint64_t*)myfp12_out);
+}
+
+
+bool pairing_eq2(uint8_t *pG1_1, uint8_t *pG2_1, uint8_t *pG1_2, uint8_t *pG2_2) {
+/*
+2pairing check:
+blst_miller_loop()
+blst_miller_loop()
+blst_fp12_mul()
+blst_final_exp()
+blst_fp12_is_one()
+*/
+    uint8_t output_miller1[48 * 12];
+    uint8_t output_miller2[48 * 12];
+    uint8_t final_exp_input[48 * 12];
+    uint8_t output[48 * 12];
+
+    blst_miller_loop(output_miller1, pG2_1, pG1_1);
+    blst_miller_loop(output_miller2, pG2_2, pG1_2);
+    blst_fp12_mul(final_exp_input, output_miller1, output_miller2);
+    blst_final_exp(result, final_exp_input);
+    return blst_is_one(result);
+}
+
+// test e(pG1, pG2) * e(-pG1, pG2) == 1 where pG1 and pG2 are generator points
+// reference: {{websnark branch link}}
+void test_pairing2_check() {
+uint8_t p1_G1[48], p1_G2[48 * 2], p2_G1[48], p2_n_G1[48 * 2];
+
+// p1_G1 <- G1 generator (normal form)
+// p1_G2 <- G2 generator (normal form)
+
+// p2_G1 <- neg(p1_G1)
+// p2_G2 <- p1_G2
+
+
+/*
+assert e(p1[0], p2[0]) * e(p1[1], p2[1]) == 1
 */
 }
 
@@ -209,12 +245,12 @@ void test4(){
   blst_fp12 *myfp12 = malloc(48*12);
 
   blst_miller_loop(myfp12,(blst_p2_affine*)Q,(blst_p1_affine*)P);
-  printf("output of miller loop\n");
-  f12print((uint64_t*)myfp12);
+  //printf("output of miller loop\n");
+  //f12print((uint64_t*)myfp12);
 
-  //blst_fp12 *myfp12_out = malloc(48*12);
-  //blst_final_exp(myfp12_out, myfp12);
-  //f12print((uint64_t*)myfp12_out);
+  blst_fp12 *myfp12_out = malloc(48*12);
+  blst_final_exp(myfp12_out, myfp12);
+  f12print((uint64_t*)myfp12_out);
 /* output in spec is:
       0x11619b45f61edfe3b47a15fac19442526ff489dcda25e59121d9931438907dfd448299a87dde3a649bdba96e84d54558
       0x153ce14a76a53e205ba8f275ef1137c56a566f638b52d34ba3bf3bf22f277d70f76316218c0dfd583a394b8448d2be7f
