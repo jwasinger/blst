@@ -69,7 +69,7 @@ static inline void mul_fp2(vec384x ret, const vec384x a, const vec384x b)
 {   
 
 // paul: flip this switch to 
-#define MUL_FP2_SWITCH 0
+#define MUL_FP2_SWITCH 2
 
 #if MUL_FP2_SWITCH==0
   // optimized version
@@ -102,7 +102,7 @@ static inline void mul_fp2(vec384x ret, const vec384x a, const vec384x b)
   mul_mont_384(aa, a[0], b[0], BLS12_381_P, p0);
   mul_mont_384(cc, a[1], b[1], BLS12_381_P, p0);
   sub_mod_384(ret[0], aa, cc, BLS12_381_P);
-  add_mod_384(ret[1], bb, aa, BLS12_381_P);
+  sub_mod_384(ret[1], bb, aa, BLS12_381_P);
   sub_mod_384(ret[1], ret[1], cc, BLS12_381_P);
 #endif
 
