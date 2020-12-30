@@ -49,6 +49,12 @@ void f2print(uint64_t* p){
   f1print(p);
   f1print(p+6);
 }
+
+void g2print(uint64_t *elem) {
+  f2print(elem);
+  f2print(elem + 12);
+}
+
 void f6print(uint64_t* p){
   f2print(p);
   f2print(p+12);
@@ -66,13 +72,14 @@ bool pairing_eq2(blst_p1_affine *pG1_1, blst_p2_affine *pG2_1, blst_p1_affine *p
   uint8_t output_miller2[48 * 12];
   uint8_t final_exp_input[48 * 12];
   uint8_t result[48 * 12];
+  memcpy(final_exp_input, blst_fp12_one(), sizeof(blst_fp12));
 
-    if(!blst_p1_affine_in_g1(blst_p1_affine_generator())) {
+    if(!blst_p1_affine_in_g1(pG1_1)) {
       printf("bad pG1_1\n");
       return 0;
     }
 
-    if(!blst_p2_affine_in_g2(blst_p2_affine_generator())) {
+    if(!blst_p2_affine_in_g2(pG2_1)) {
       printf("bad pG2_1\n");
       return 0;
     }
@@ -87,23 +94,72 @@ bool pairing_eq2(blst_p1_affine *pG1_1, blst_p2_affine *pG2_1, blst_p1_affine *p
       return 0;
     }
 
+  printf("pG1\n");
+  f2print(pG1_1);
+
+  printf("pG2\n");
+  g2print(pG2_1);
+
   blst_miller_loop(output_miller1, pG2_1, pG1_1);
+  blst_fp12_mul(final_exp_input, final_exp_input, output_miller1);
+
   blst_miller_loop(output_miller2, pG2_2, pG1_2);
-  blst_fp12_mul(final_exp_input, output_miller1, output_miller2);
+  blst_fp12_mul(final_exp_input, final_exp_input, output_miller2);
+
+  printf("final exp input\n");
+  f12print(final_exp_input);
+
   blst_final_exp(result, final_exp_input);
+
+  printf("final exp output\n");
+  f12print(result);
 
   return blst_fp12_is_one(result);
 }
 
-// test e(pG1, pG2) * e(-pG1, pG2) == 1 where pG1 and pG2 are generator points
-void test_pairing2_check() {
-  blst_p1_affine p1_G1, p2_G1;
-  blst_p2_affine p1_G2, p2_g2;
+bool pairing_eq1(blst_p1_affine *pG1_1, blst_p2_affine *pG2_1) {
+    uint8_t input_final_exp[48 * 12];
+    uint8_t result[48 * 12];
 
-  /*
-  assert e(p1[0], p2[0]) * e(p1[1], p2[1]) == 1
-  */
+    if(!blst_p1_affine_in_g1(pG1_1)) {
+      printf("bad pG1_1\n");
+      return 0;
+    }
+
+    if(!blst_p2_affine_in_g2(pG2_1)) {
+      printf("bad pG2_1\n");
+      return 0;
+    }
+
+    blst_miller_loop(input_final_exp, pG2_1, pG1_1);
+    //blst_fp12_mul(input_final_exp, output_miller1, output_miller2);
+
+    blst_final_exp(result, input_final_exp);
+    return blst_fp12_is_one(result);
+}
+
+// test e(pG1, pG2) * e(-pG1, pG2) == 1 where pG1 and pG2 are generator points
+void test_pairing2_check_naive() {
   if (!pairing_eq2(&BLS12_381_G1, &BLS12_381_G2, &BLS12_381_NEG_G1, &BLS12_381_G2)) {
+      printf("failed\n");
+  }
+}
+
+// test e(pG1, pG2*42) * e(pG1, -pG2*42) == 1 where pG1 and pG2 are generator points
+void test_pairing2_check() {
+  blst_p1 pG1_1, pG1_2;
+  blst_p2 pG2_1, pG2_2;
+
+  printf("sitll runnling\n");
+
+  blst_scalar s;
+  uint32_t scalar_vals[8] = {0,0,0,0,0,0,42};
+  blst_scalar_from_uint32(&s, scalar_vals);
+
+  blst_p2_mult(&pG2_1, &BLS12_381_NEG_G2, &s, 192);
+  blst_p2_mult(&pG2_2, &BLS12_381_G2, &s, 192);
+
+  if (!pairing_eq2(&BLS12_381_G1, &pG2_1, &BLS12_381_G1, &pG2_2)) {
       printf("failed\n");
   }
 }
