@@ -39,6 +39,26 @@ void hexstr_to_bytearray(uint8_t* out, char* in){
 }
 
 
+// print single field element in bigendian
+void f1print_evmcurves(uint8_t *p) {
+    for (size_t i = 47; ; i--) {
+        printf("%02x", *(p+i));
+        if (i == 0) {
+            break;
+        }
+    }
+    printf("\n");
+}
+
+void g2print_evmcurves(uint8_t *p) {
+    g1print_evmcurves(p);
+    g1print_evmcurves(p + 92);
+}
+
+void g1print_evmcurves(uint8_t *p) {
+    f1print_evmcurves(p);
+    f1print_evmcurves(p + 48);
+}
 
 void f1print(uint64_t* p){
   for (int i=0;i<6;i++)
@@ -74,18 +94,21 @@ bool pairing_eq2(blst_p1_affine *pG1_1, blst_p2_affine *pG2_1, blst_p1_affine *p
   uint8_t result[48 * 12];
   memcpy(final_exp_input, blst_fp12_one(), sizeof(blst_fp12));
 
-
   printf("pG1\n");
-  f2print(pG1_1);
+  // f2print(pG1_1);
+  g1print_evmcurves(pG1_1);
 
   printf("pG2\n");
-  g2print(pG2_1);
+  //g2print(pG2_1);
+  g2print_evmcurves(pG2_1);
 
   printf("pG1\n");
-  f2print(pG1_2);
+  // f2print(pG1_2);
+  g1print_evmcurves(pG1_2);
 
   printf("pG2\n");
-  g2print(pG2_2);
+  // g2print(pG2_2);
+  g2print_evmcurves(pG2_2);
 
 // TODO check the points are on the curve
 
@@ -110,7 +133,6 @@ bool pairing_eq2(blst_p1_affine *pG1_1, blst_p2_affine *pG2_1, blst_p1_affine *p
       printf("bad pG2_2\n");
       return 0;
     }
-
 
   blst_miller_loop(output_miller1, pG2_1, pG1_1);
   blst_fp12_mul(final_exp_input, final_exp_input, output_miller1);
@@ -157,15 +179,13 @@ void test_pairing2_check_naive() {
   }
 }
 
-// test e(pG1, pG2*42) * e(pG1, -pG2*42) == 1 where pG1 and pG2 are generator points
+// test e(pG1, pG2*2) * e(pG1, -pG2*2) == 1 where pG1 and pG2 are generator points
 void test_pairing2_check() {
   blst_p2 pG2_1_j, pG2_2_j;
   blst_p1_affine pG1_1, pG1_2;
   blst_p2_affine pG2_1, pG2_2;
 
   blst_p2_double(&pG2_1_j, blst_p2_generator());
-
-  // TODO apply negative generator point here.
   blst_p2_from_affine(&pG2_2_j, &BLS12_381_NEG_G2);
   blst_p2_double(&pG2_2_j, &pG2_2_j);
 
@@ -173,21 +193,6 @@ void test_pairing2_check() {
   blst_p2_to_affine(&pG2_2, &pG2_2_j);
   blst_p1_to_affine(&pG1_1, blst_p1_generator());
   blst_p1_to_affine(&pG1_2, blst_p1_generator());
-
-  printf("sitll runnling\n");
-/*
-  blst_scalar s;
-  uint32_t scalar_vals[8] = {0,0,0,0,0,0,2};
-  blst_scalar_from_uint32(&s, scalar_vals);
-*/
-
-  // blst_p2_mult(&pG2_1, &BLS12_381_NEG_G2, &s, 255);
-  // blst_p2_mult(&pG2_2, &BLS12_381_G2, &s, 255);
-
-/*
-  blst_p2_add_or_double_affine(&pG2_1, &BLS12_381_NEG_G2, &BLS12_381_NEG_G2);
-  blst_p2_add_or_double_affine(&pG2_2, &BLS12_381_G2, &BLS12_381_G2);
-*/
 
   if (!pairing_eq2(&pG1_1, &pG2_1, &pG1_2, &pG2_2)) {
       printf("failed\n");
