@@ -151,6 +151,34 @@ bool pairing_eq2(blst_p1_affine *pG1_1, blst_p2_affine *pG2_1, blst_p1_affine *p
   return blst_fp12_is_one(result);
 }
 
+bool pairing_eqn(blst_p1_affine *pG1_points, blst_p2_affine *pG2_points, size_t n_points) {
+    uint8_t output_miller[48 * 12];
+    uint8_t final_exp_input[48 * 12];
+    uint8_t result[48 * 12];
+
+    memcpy(final_exp_input, blst_fp12_one(), sizeof(blst_fp12));
+
+    for (size_t i = 0; i < n_points; i++) {
+        if(!blst_p1_affine_in_g1(&pG1_points[i])) {
+            printf("bad pG1_1\n");
+            return 0;
+        }
+
+        if(!blst_p2_affine_in_g2(&pG2_points[i])) {
+           printf("bad pG2_1\n");
+           return 0;
+        }
+    }
+
+    for (size_t i = 0; i < n_points; i++) {
+        blst_miller_loop(output_miller, &pG2_points[i], &pG1_points[i]);
+        blst_fp12_mul(final_exp_input, final_exp_input, output_miller);
+    }
+
+    blst_final_exp(result, final_exp_input);
+    return blst_fp12_is_one(result);
+}
+
 bool pairing_eq1(blst_p1_affine *pG1_1, blst_p2_affine *pG2_1) {
     uint8_t input_final_exp[48 * 12];
     uint8_t result[48 * 12];
@@ -181,26 +209,52 @@ void test_pairing2_check_naive() {
 
 // test e(pG1, pG2*2) * e(pG1, -pG2*2) == 1 where pG1 and pG2 are generator points
 void test_pairing2_check() {
-  blst_p2 pG2_1_j, pG2_2_j;
-  blst_p1_affine pG1_1, pG1_2;
-  blst_p2_affine pG2_1, pG2_2;
+  //// blst_p2 pG2_1_j, pG2_2_j;
+  // blst_p1_affine pG1_1, pG1_2;
+  // blst_p2_affine pG2_1, pG2_2;
 
-  blst_p2_double(&pG2_1_j, blst_p2_generator());
-  blst_p2_from_affine(&pG2_2_j, &BLS12_381_NEG_G2);
-  blst_p2_double(&pG2_2_j, &pG2_2_j);
+  blst_p1 pG1_points_j[2];
+  blst_p2 pG2_points_j[2];
 
-  blst_p2_to_affine(&pG2_1, &pG2_1_j);
-  blst_p2_to_affine(&pG2_2, &pG2_2_j);
-  blst_p1_to_affine(&pG1_1, blst_p1_generator());
-  blst_p1_to_affine(&pG1_2, blst_p1_generator());
+  blst_p1_affine pG1_points[2];
+  blst_p2_affine pG2_points[2];
 
+  size_t n_points = 2;
+
+  blst_p2_double(&pG2_points_j[0], blst_p2_generator());
+  blst_p2_from_affine(&pG2_points_j[1], &BLS12_381_NEG_G2);
+  blst_p2_double(&pG2_points_j[1], &pG2_points_j[1]);
+
+  blst_p2_to_affine(&pG2_points[0], &pG2_points_j[0]);
+  blst_p2_to_affine(&pG2_points[1], &pG2_points_j[1]);
+  blst_p1_to_affine(&pG1_points[0], blst_p1_generator());
+  blst_p1_to_affine(&pG1_points[1], blst_p1_generator());
+
+/*
   if (!pairing_eq2(&pG1_1, &pG2_1, &pG1_2, &pG2_2)) {
+*/
+  if (!pairing_eqn(pG1_points, pG2_points, 2)) {
+      printf("failed\n");
+  }
+}
+
+void test_pairing_nondegeneracy() {
+  blst_p1_affine pG1_points[1];
+  blst_p2_affine pG2_points[1];
+
+  size_t n_points = 1;
+
+  blst_p2_to_affine(&pG2_points[0], blst_p2_generator());
+  blst_p1_to_affine(&pG1_points[0], blst_p1_generator());
+
+  if (pairing_eqn(pG1_points, pG2_points, 1)) {
       printf("failed\n");
   }
 }
 
 int main(int argc,char**argv){
   test_pairing2_check();
+  test_pairing_nondegeneracy();
 
   return 0;
 
